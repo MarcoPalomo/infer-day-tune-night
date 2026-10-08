@@ -1,0 +1,10 @@
+# Serveurs / workstations NVIDIA (GPU Operator installé).
+model:
+  hf_id: Qwen/Qwen2.5-7B-Instruct
+inference:
+  backend: vllm
+  gpu_resource: nvidia.com/gpu
+training:
+  device: cuda
+  quantization: 4bit            # QLoRA
+  max_threads: 8

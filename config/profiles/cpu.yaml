@@ -1,0 +1,11 @@
+# Aucun accélérateur : démo, CI, petits clients.
+model:
+  hf_id: Qwen/Qwen2.5-0.5B-Instruct
+  gguf_file: qwen2.5-0.5b-instruct-q8_0.gguf
+inference:
+  backend: llamacpp
+  gpu_resource: ""
+training:
+  device: cpu
+  quantization: none
+  max_threads: 8

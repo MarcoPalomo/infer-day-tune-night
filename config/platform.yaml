@@ -1,0 +1,55 @@
+# Configuration commune à tous les clients.
+# Les valeurs dépendantes du matériel vivent dans config/profiles/<profil>.yaml
+# et sont fusionnées par-dessus (voir src/idtn/config.py).
+profile: cpu                 # nvidia | amd-rocm | apu-vulkan | cpu
+timezone: Europe/Paris
+
+schedule:
+  day_start: "30 6 * * *"
+  night_start: "0 23 * * *"
+  night_budget_seconds: 25200   # au-delà, le Job de nuit est tué (activeDeadlineSeconds)
+
+inference:
+  # KEDA : 1 réplique chaude garantie le jour (trigger cron),
+  # 0 la nuit avec réveil à la demande (trigger metrics-api sur la gateway).
+  min_replicas_day: 1
+  max_replicas: 1
+  idle_cooldown_seconds: 600
+
+training:
+  lora:
+    r: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: [q_proj, k_proj, v_proj, o_proj]
+  max_seq_len: 1024
+  epochs: 1
+  lr: 2.0e-4
+  min_new_samples: 50          # en dessous, la nuit est sautée
+  checkpoint_every_steps: 50
+
+curation:
+  dedupe: true
+  scrub_pii: true
+  holdout_ratio: 0.1
+  self_judge: true             # le SLM note ses propres réponses (1-5)
+  self_judge_min_score: 3
+
+eval:
+  min_holdout_gain: 0.02       # baisse relative de perplexité requise
+  max_golden_regression: 0.01  # tolérance sur le golden set figé
+
+guards:
+  # Utiles surtout sur poste de travail / edge ; neutres sur serveur.
+  require_ac_power: false
+  max_cpu_temp_c: 90
+  max_gpu_temp_c: 87
+  min_free_mem_gib: 4
+  poll_seconds: 30
+
+paths:
+  models: /data/models
+  logs: /data/logs
+  datasets: /data/datasets
+  adapters: /data/adapters     # adapters/<run_id>/ ; adapters/current -> symlink
+  golden: /data/golden/golden.jsonl

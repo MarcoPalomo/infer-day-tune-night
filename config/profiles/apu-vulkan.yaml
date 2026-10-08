@@ -1,0 +1,16 @@
+# iGPU / APU (Radeon 780M/860M/890M, Strix Halo, Intel Arc iGPU…) via Vulkan.
+# Mémoire partagée avec l'hôte : rester sur de petits modèles.
+model:
+  hf_id: Qwen/Qwen2.5-0.5B-Instruct
+  gguf_file: qwen2.5-0.5b-instruct-q8_0.gguf
+inference:
+  backend: llamacpp
+  gpu_resource: devices.idtn.io/dri
+training:
+  device: cpu                   # ROCm sur iGPU non officiel : risque de hang
+  quantization: none
+  max_threads: 10
+guards:
+  require_ac_power: true
+  max_cpu_temp_c: 88
+  max_gpu_temp_c: 85

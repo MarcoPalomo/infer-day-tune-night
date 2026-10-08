@@ -1,0 +1,10 @@
+# AMD Instinct / Radeon supportés par ROCm (AMD GPU Operator ou k8s-device-plugin).
+model:
+  hf_id: Qwen/Qwen2.5-7B-Instruct
+inference:
+  backend: vllm
+  gpu_resource: amd.com/gpu
+training:
+  device: rocm
+  quantization: none            # bitsandbytes ROCm encore inégal selon les versions
+  max_threads: 8
