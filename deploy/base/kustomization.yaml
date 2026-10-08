@@ -1,0 +1,19 @@
+# Rendu : kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/overlays/<profil>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: idtn
+resources:
+  - namespace.yaml
+  - storage.yaml
+  - rbac.yaml
+  - gateway.yaml
+  - keda.yaml
+  - pipeline.yaml
+configMapGenerator:
+  - name: idtn-config
+    files:
+      - platform.yaml=../../config/platform.yaml
+      - nvidia.yaml=../../config/profiles/nvidia.yaml
+      - amd-rocm.yaml=../../config/profiles/amd-rocm.yaml
+      - apu-vulkan.yaml=../../config/profiles/apu-vulkan.yaml
+      - cpu.yaml=../../config/profiles/cpu.yaml

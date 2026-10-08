@@ -1,0 +1,11 @@
+# Mono-nœud : RWO suffit. Multi-nœuds : passer en ReadWriteMany (NFS, CephFS…)
+# via un patch d'overlay, car gateway, inference et pipeline partagent /data.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: idtn-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 50Gi

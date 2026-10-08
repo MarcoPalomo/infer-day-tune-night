@@ -1,0 +1,52 @@
+# llama.cpp server : base GGUF + adapter LoRA GGUF courant (s'il existe).
+# replicas géré par KEDA (ScaledObject "inference").
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+spec:
+  replicas: 0
+  strategy: {type: Recreate}      # une seule réplique sur l'accélérateur
+  selector:
+    matchLabels: {app: inference}
+  template:
+    metadata:
+      labels:
+        app: inference
+        kai.scheduler/queue: idtn-inference
+    spec:
+      schedulerName: kai-scheduler
+      priorityClassName: inference
+      containers:
+        - name: server
+          image: ghcr.io/ggml-org/llama.cpp:server   # surchargé par overlay (vulkan…)
+          command: [sh, -c]
+          args:
+            - |
+              LORA=""
+              [ -f /data/adapters/current/adapter.gguf ] && LORA="--lora /data/adapters/current/adapter.gguf"
+              exec /app/llama-server -m /data/models/base.gguf $LORA \
+                --host 0.0.0.0 --port 8080 --ctx-size 4096 --n-gpu-layers ${NGL:-0} \
+                --metrics --alias idtn
+          env:
+            - {name: NGL, value: "0"}
+          ports: [{containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /health, port: 8080}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: "2", memory: 2Gi}
+            limits: {cpu: "4", memory: 6Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data, readOnly: true}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: idtn-data}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference
+spec:
+  selector: {app: inference}
+  ports: [{port: 8080, targetPort: 8080}]

@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+components:
+  - ../../components/inference-vllm
+patches:
+  - target: {kind: Deployment, name: inference}
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: rocm/vllm:latest
+      - op: add
+        path: /spec/template/spec/containers/0/resources/limits/amd.com~1gpu
+        value: 1
+  - target: {kind: CronJob, name: night-pipeline}
+    patch: |
+      - op: replace
+        path: /spec/jobTemplate/spec/template/spec/containers/0/image
+        value: idtn/trainer:dev-rocm
+      - op: add
+        path: /spec/jobTemplate/spec/template/spec/containers/0/resources/limits/amd.com~1gpu
+        value: 1
+  - target: {kind: Deployment}
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: IDTN_PROFILE, value: amd-rocm}
+  - target: {kind: CronJob}
+    patch: |
+      - op: add
+        path: /spec/jobTemplate/spec/template/spec/containers/0/env
+        value: [{name: IDTN_PROFILE, value: amd-rocm}]
+  - target: {kind: Job}
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: IDTN_PROFILE, value: amd-rocm}

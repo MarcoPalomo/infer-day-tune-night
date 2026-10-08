@@ -1,0 +1,26 @@
+# Horaires à garder alignés avec config/platform.yaml (schedule.*).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: inference
+spec:
+  scaleTargetRef:
+    name: inference
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 600
+  triggers:
+    # Jour : une réplique chaude garantie.
+    - type: cron
+      metadata:
+        timezone: Europe/Paris
+        start: "30 6 * * *"
+        end: "0 23 * * *"
+        desiredReplicas: "1"
+    # Toute heure : réveil depuis 0 dès qu'une requête attend dans la gateway.
+    - type: metrics-api
+      metadata:
+        url: "http://gateway.idtn.svc.cluster.local:8080/keda/metrics"
+        valueLocation: "pending"
+        targetValue: "1"
+        activationTargetValue: "0"

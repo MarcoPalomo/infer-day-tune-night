@@ -1,0 +1,27 @@
+# Le pipeline redémarre l'inférence après promotion d'un adapter.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: idtn-pipeline
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: idtn-pipeline
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [inference]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: idtn-pipeline
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: idtn-pipeline
+subjects:
+  - kind: ServiceAccount
+    name: idtn-pipeline

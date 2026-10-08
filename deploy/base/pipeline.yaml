@@ -1,0 +1,78 @@
+# Cycle de nuit : curate -> train -> eval -> promote.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: night-pipeline
+spec:
+  schedule: "0 23 * * *"          # = schedule.night_start
+  timeZone: Europe/Paris
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 25200  # = schedule.night_budget_seconds
+      template:
+        metadata:
+          labels:
+            app: idtn-pipeline
+            kai.scheduler/queue: idtn-training
+        spec:
+          schedulerName: kai-scheduler
+          priorityClassName: train
+          serviceAccountName: idtn-pipeline
+          restartPolicy: Never
+          containers:
+            - name: pipeline
+              image: idtn/trainer:dev
+              args: [night]
+              resources:
+                requests: {cpu: "4", memory: 8Gi}
+                limits: {cpu: "10", memory: 16Gi}
+              volumeMounts:
+                - {name: data, mountPath: /data}
+                - {name: config, mountPath: /etc/idtn}
+                - {name: sys, mountPath: /host/sys, readOnly: true}
+          volumes:
+            - name: data
+              persistentVolumeClaim: {claimName: idtn-data}
+            - name: config
+              configMap: {name: idtn-config}
+            - name: sys
+              hostPath: {path: /sys}
+---
+# Téléchargement initial du modèle de base (HF + GGUF selon le backend).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bootstrap
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        kai.scheduler/queue: idtn-training
+    spec:
+      schedulerName: kai-scheduler
+      priorityClassName: train
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: idtn/trainer:dev
+          args: [bootstrap]
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef: {name: hf-token, key: token, optional: true}
+          resources:
+            requests: {cpu: 500m, memory: 1Gi}
+            limits: {cpu: "2", memory: 4Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: config, mountPath: /etc/idtn}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: idtn-data}
+        - name: config
+          configMap: {name: idtn-config}

@@ -1,0 +1,57 @@
+# vLLM : base HF + adapter PEFT courant exposé sous le nom de modèle "idtn".
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+spec:
+  replicas: 0
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: inference}
+  template:
+    metadata:
+      labels:
+        app: inference
+        kai.scheduler/queue: idtn-inference
+    spec:
+      schedulerName: kai-scheduler
+      priorityClassName: inference
+      containers:
+        - name: server
+          image: vllm/vllm-openai:latest   # surchargé par overlay (rocm…)
+          command: [sh, -c]
+          args:
+            - |
+              if [ -f /data/adapters/current/peft/adapter_config.json ]; then
+                EXTRA="--enable-lora --max-lora-rank 64 --lora-modules idtn=/data/adapters/current/peft --served-model-name idtn-base"
+              else
+                EXTRA="--served-model-name idtn"
+              fi
+              exec python3 -m vllm.entrypoints.openai.api_server --model /data/models/base-hf \
+                --host 0.0.0.0 --port 8080 --max-model-len 4096 --gpu-memory-utilization 0.85 $EXTRA
+          env:
+            - {name: HF_HUB_OFFLINE, value: "1"}
+          ports: [{containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /health, port: 8080}
+            periodSeconds: 5
+            failureThreshold: 60
+          resources:
+            requests: {cpu: "2", memory: 8Gi}
+            limits: {cpu: "8", memory: 24Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data, readOnly: true}
+            - {name: shm, mountPath: /dev/shm}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: idtn-data}
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 2Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference
+spec:
+  selector: {app: inference}
+  ports: [{port: 8080, targetPort: 8080}]
