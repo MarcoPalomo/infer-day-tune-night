@@ -1,0 +1,7 @@
+# /etc/rancher/k3s/config.yaml — k3s mono-nœud de dev/démo sur poste de travail.
+write-kubeconfig-mode: "0644"
+disable: [traefik]
+kubelet-arg:
+  - "system-reserved=cpu=2,memory=4Gi"
+  - "kube-reserved=cpu=500m,memory=1Gi"
+  - "eviction-hard=memory.available<2Gi,nodefs.available<10%"

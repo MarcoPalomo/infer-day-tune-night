@@ -1,0 +1,32 @@
+# Hiérarchie de queues KAI. quota -1 = illimité ; ajuster par client.
+apiVersion: scheduling.run.ai/v2
+kind: Queue
+metadata:
+  name: idtn
+spec:
+  resources:
+    cpu: {quota: -1, limit: -1, overQuotaWeight: 1}
+    gpu: {quota: -1, limit: -1, overQuotaWeight: 1}
+    memory: {quota: -1, limit: -1, overQuotaWeight: 1}
+---
+apiVersion: scheduling.run.ai/v2
+kind: Queue
+metadata:
+  name: idtn-inference
+spec:
+  parentQueue: idtn
+  resources:
+    cpu: {quota: -1, limit: -1, overQuotaWeight: 4}
+    gpu: {quota: 1, limit: -1, overQuotaWeight: 4}     # quota garanti : prioritaire
+    memory: {quota: -1, limit: -1, overQuotaWeight: 4}
+---
+apiVersion: scheduling.run.ai/v2
+kind: Queue
+metadata:
+  name: idtn-training
+spec:
+  parentQueue: idtn
+  resources:
+    cpu: {quota: 0, limit: -1, overQuotaWeight: 1}
+    gpu: {quota: 0, limit: -1, overQuotaWeight: 1}     # uniquement en sur-quota : préemptible
+    memory: {quota: 0, limit: -1, overQuotaWeight: 1}

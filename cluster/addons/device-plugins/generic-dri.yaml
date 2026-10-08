@@ -1,0 +1,47 @@
+# Expose l'iGPU (/dev/dri) et, optionnellement, le NPU (/dev/accel) comme ressources
+# étendues comptées (count: 1 => un seul consommateur à la fois).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: generic-device-plugin
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels: {app: generic-device-plugin}
+  template:
+    metadata:
+      labels: {app: generic-device-plugin}
+    spec:
+      priorityClassName: system-node-critical
+      containers:
+        - name: plugin
+          image: squat/generic-device-plugin:latest
+          args:
+            - --domain
+            - devices.idtn.io
+            - --device
+            - |
+              name: dri
+              groups:
+                - count: 1
+                  paths:
+                    - path: /dev/dri/renderD*
+                    - path: /dev/dri/card*
+                    - path: /dev/kfd          # requis seulement si ROCm
+            - --device
+            - |
+              name: npu
+              groups:
+                - count: 1
+                  paths:
+                    - path: /dev/accel/accel*
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {cpu: 50m, memory: 64Mi}
+          securityContext: {privileged: true}
+          volumeMounts:
+            - {name: device-plugin, mountPath: /var/lib/kubelet/device-plugins}
+            - {name: dev, mountPath: /dev}
+      volumes:
+        - {name: device-plugin, hostPath: {path: /var/lib/kubelet/device-plugins}}
+        - {name: dev, hostPath: {path: /dev}}
